@@ -7,6 +7,12 @@ resources:
   - matomo.yaml
   - networkpolicy.yaml
 
+# groups these resources under "Analytics" in the OpenShift console's Topology view
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: Analytics
+    includeSelectors: false
+
 # keep secret names stable (no hash suffix) so BuildConfig secretReferences don't need patching
 generatorOptions:
   disableNameSuffixHash: true

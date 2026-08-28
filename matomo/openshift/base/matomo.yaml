@@ -110,7 +110,7 @@ spec:
               memory: 64Mi
             limits:
               cpu: 200m
-              memory: 128Mi
+              memory: 256Mi
         - name: php-fpm
           image: "image-registry.openshift-image-registry.svc:5000/placeholder/matomo-fpm:latest"
           ports:
@@ -162,7 +162,7 @@ spec:
               memory: 64Mi
             limits:
               cpu: 200m
-              memory: 512Mi
+              memory: 256Mi
       volumes:
         - name: webroot
           emptyDir: {}
