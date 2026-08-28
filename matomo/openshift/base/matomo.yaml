@@ -57,7 +57,7 @@ spec:
       initContainers:
         - name: seed-webroot
           image: "image-registry.openshift-image-registry.svc:5000/placeholder/matomo-fpm:latest"
-          command: ["sh", "-c", "cp -a /usr/src/matomo/. /shared-html/"]
+          command: ["sh", "-c", "cp -a /var/www/html/. /shared-html/"]
           volumeMounts:
             - name: webroot
               mountPath: /shared-html
