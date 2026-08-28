@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Deletes the kustomize-managed resources for the named environment (defaults to dev) from
-# the namespace currently selected by `oc project`.
+# Switches to the overlay's target project, then deletes the kustomize-managed resources
+# for the named environment (defaults to dev).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,9 +11,15 @@ if [[ ! -d "${OVERLAY_DIR}" ]]; then
   exit 1
 fi
 
+NAMESPACE="$(awk -F': *' '/^namespace:/ {print $2; exit}' "${OVERLAY_DIR}/kustomization.yaml")"
+if [[ -z "${NAMESPACE}" ]]; then
+  echo "No 'namespace:' set in ${OVERLAY_DIR}/kustomization.yaml" >&2
+  exit 1
+fi
+oc project "${NAMESPACE}"
+
 oc delete -k "${OVERLAY_DIR}" --ignore-not-found
 
-echo "Kustomize-managed resources deleted. The matomo-mariadb Secret and PersistentVolumeClaims" \
-     "are not managed by kustomize and are left in place; delete them manually" \
-     "(oc delete secret matomo-mariadb; oc delete pvc -l \"app in (matomo,matomo-mariadb)\")" \
-     "if you also want to discard stored credentials/data."
+echo "Kustomize-managed resources deleted, including the matomo and matomo-mariadb PersistentVolumeClaims." \
+     "The matomo-mariadb Secret is provisioned separately and is not managed by kustomize;" \
+     "delete it manually (oc delete secret matomo-mariadb) if you also want to discard stored credentials."

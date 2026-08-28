@@ -17,7 +17,7 @@ spec:
     git:
       uri: https://github.com/bcgov/analytics-deploy-cleanbcdx.git
       ref: master
-    contextDir: matomo/docker
+    contextDir: matomo/docker/matomo-fpm
   strategy:
     type: Docker
     dockerStrategy:

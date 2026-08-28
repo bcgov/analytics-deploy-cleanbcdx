@@ -5,7 +5,8 @@ metadata:
   labels:
     app: matomo-mariadb
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: 
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Gi
@@ -76,7 +77,7 @@ spec:
               memory: 64Mi
             limits:
               cpu: 200m
-              memory: 512Mi
+              memory: 256Mi
       volumes:
         - name: data
           persistentVolumeClaim:

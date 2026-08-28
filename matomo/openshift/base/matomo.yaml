@@ -5,7 +5,8 @@ metadata:
   labels:
     app: matomo
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: 
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Gi
@@ -24,28 +25,6 @@ spec:
       port: 8080
       targetPort: 8080
 ---
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: matomo
-  annotations:
-     haproxy.router.openshift.io/ip_whitelist: >-
-      142.32.0.0/16 142.29.0.0/16 142.28.0.0/16 10.0.0.0/16
-     haproxy.router.openshift.io/ip_whitelist_comment: >-
-      #CIDR 142... only allow BC Gov internal ips  
-  labels:
-    app: matomo
-spec:
-  host: matomo-f181a8-dev.apps.gold.devops.gov.bc.ca
-  to:
-    kind: Service
-    name: matomo
-  port:
-    targetPort: http
-  tls:
-    termination: edge
-    insecureEdgeTerminationPolicy: Redirect
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -53,10 +32,8 @@ metadata:
   labels:
     app: matomo
   annotations:
-    # replaces DeploymentConfig's ImageChange triggers: patches these container/initContainer
-    # images whenever the corresponding ImageStreamTag is updated by a Build. Their initial
-    # "placeholder" image values below are only there to satisfy Pod image-field validation
-    # until the trigger fires.
+    # patches these container/initContainer images whenever the corresponding ImageStreamTag is updated by a Build. 
+    # Their initial "placeholder" image values below are only there to satisfy Pod image-field validation until the trigger fires.
     image.openshift.io/triggers: |
       [
         {"from":{"kind":"ImageStreamTag","name":"matomo-fpm:latest"},"fieldPath":"spec.template.spec.initContainers[?(@.name==\"seed-webroot\")].image"},
@@ -80,10 +57,17 @@ spec:
       initContainers:
         - name: seed-webroot
           image: "image-registry.openshift-image-registry.svc:5000/placeholder/matomo-fpm:latest"
-          command: ["sh", "-c", "cp -a /var/www/html/. /shared-html/"]
+          command: ["sh", "-c", "cp -a /usr/src/matomo/. /shared-html/"]
           volumeMounts:
             - name: webroot
               mountPath: /shared-html
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
       containers:
         - name: nginx
           image: "image-registry.openshift-image-registry.svc:5000/placeholder/matomo-nginx:latest"
@@ -107,7 +91,7 @@ spec:
           resources:
             requests:
               cpu: 10m
-              memory: 64Mi
+              memory: 32Mi
             limits:
               cpu: 200m
               memory: 256Mi
@@ -159,7 +143,7 @@ spec:
           resources:
             requests:
               cpu: 10m
-              memory: 64Mi
+              memory: 32Mi
             limits:
               cpu: 200m
               memory: 256Mi
