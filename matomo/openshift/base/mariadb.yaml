@@ -32,7 +32,8 @@ spec:
       containers:
         - name: mariadb
           # the matomo-mariadb Secret is provisioned separately (see openshift/secrets/), not by kustomize
-          image: docker.io/bitnami/mariadb:11.4
+          # bitnami no longer publishes free versioned tags (e.g. 11.4), only a rolling "latest"
+          image: docker.io/bitnami/mariadb:latest
           ports:
             - containerPort: 3306
           env:
