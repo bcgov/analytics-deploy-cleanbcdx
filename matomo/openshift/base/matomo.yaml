@@ -54,7 +54,9 @@ metadata:
     app: matomo
   annotations:
     # replaces DeploymentConfig's ImageChange triggers: patches these container/initContainer
-    # images whenever the corresponding ImageStreamTag is updated by a Build
+    # images whenever the corresponding ImageStreamTag is updated by a Build. Their initial
+    # "placeholder" image values below are only there to satisfy Pod image-field validation
+    # until the trigger fires.
     image.openshift.io/triggers: |
       [
         {"from":{"kind":"ImageStreamTag","name":"matomo-fpm:latest"},"fieldPath":"spec.template.spec.initContainers[?(@.name==\"seed-webroot\")].image"},
@@ -77,14 +79,14 @@ spec:
       # container/image) needs the same Matomo source tree to serve static assets from
       initContainers:
         - name: seed-webroot
-          image: " "
+          image: "image-registry.openshift-image-registry.svc:5000/placeholder/matomo-fpm:latest"
           command: ["sh", "-c", "cp -a /var/www/html/. /shared-html/"]
           volumeMounts:
             - name: webroot
               mountPath: /shared-html
       containers:
         - name: nginx
-          image: " "
+          image: "image-registry.openshift-image-registry.svc:5000/placeholder/matomo-nginx:latest"
           ports:
             - containerPort: 8080
           volumeMounts:
@@ -110,7 +112,7 @@ spec:
               cpu: 200m
               memory: 128Mi
         - name: php-fpm
-          image: " "
+          image: "image-registry.openshift-image-registry.svc:5000/placeholder/matomo-fpm:latest"
           ports:
             - containerPort: 9000
           env:
