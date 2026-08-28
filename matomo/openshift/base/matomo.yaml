@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: matomo
+  labels:
+    app: matomo
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matomo
+  labels:
+    app: matomo
+spec:
+  selector:
+    app: matomo
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: matomo
+  annotations:
+     haproxy.router.openshift.io/ip_whitelist: >-
+      142.32.0.0/16 142.29.0.0/16 142.28.0.0/16 10.0.0.0/16
+     haproxy.router.openshift.io/ip_whitelist_comment: >-
+      #CIDR 142... only allow BC Gov internal ips  
+  labels:
+    app: matomo
+spec:
+  host: matomo-f181a8-dev.apps.gold.devops.gov.bc.ca
+  to:
+    kind: Service
+    name: matomo
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matomo
+  labels:
+    app: matomo
+  annotations:
+    # replaces DeploymentConfig's ImageChange triggers: patches these container/initContainer
+    # images whenever the corresponding ImageStreamTag is updated by a Build
+    image.openshift.io/triggers: |
+      [
+        {"from":{"kind":"ImageStreamTag","name":"matomo-fpm:latest"},"fieldPath":"spec.template.spec.initContainers[?(@.name==\"seed-webroot\")].image"},
+        {"from":{"kind":"ImageStreamTag","name":"matomo-fpm:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"php-fpm\")].image"},
+        {"from":{"kind":"ImageStreamTag","name":"matomo-nginx:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"nginx\")].image"}
+      ]
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matomo
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: matomo
+    spec:
+      # seeds the shared webroot volume from the php-fpm image, since nginx (in its own
+      # container/image) needs the same Matomo source tree to serve static assets from
+      initContainers:
+        - name: seed-webroot
+          image: " "
+          command: ["sh", "-c", "cp -a /var/www/html/. /shared-html/"]
+          volumeMounts:
+            - name: webroot
+              mountPath: /shared-html
+      containers:
+        - name: nginx
+          image: " "
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: webroot
+              mountPath: /var/www/html
+          readinessProbe:
+            httpGet:
+              path: /matomo.php
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /matomo.php
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+        - name: php-fpm
+          image: " "
+          ports:
+            - containerPort: 9000
+          env:
+            - name: MATOMO_DATABASE_HOST
+              value: matomo-mariadb
+            - name: MATOMO_DATABASE_ADAPTER
+              value: mysql
+            - name: MATOMO_DATABASE_TABLES_PREFIX
+              value: matomo_
+            - name: MATOMO_DATABASE_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: matomo-mariadb
+                  key: database-name
+            - name: MATOMO_DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: matomo-mariadb
+                  key: database-user
+            - name: MATOMO_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matomo-mariadb
+                  key: database-password
+          volumeMounts:
+            - name: webroot
+              mountPath: /var/www/html
+            - name: data
+              mountPath: /var/www/html/config
+              subPath: config
+            - name: data
+              mountPath: /var/www/html/misc/user
+              subPath: misc-user
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: webroot
+          emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: matomo

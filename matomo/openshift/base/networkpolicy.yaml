@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matomo-allow-ingress
+  labels:
+    app: matomo
+spec:
+  podSelector:
+    matchLabels:
+      app: matomo
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matomo-mariadb-allow-from-matomo
+  labels:
+    app: matomo-mariadb
+spec:
+  podSelector:
+    matchLabels:
+      app: matomo-mariadb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: matomo
+      ports:
+        - protocol: TCP
+          port: 3306

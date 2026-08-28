@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - buildconfig.yaml
+  - mariadb.yaml
+  - matomo.yaml
+  - networkpolicy.yaml
+
+# keep secret names stable (no hash suffix) so BuildConfig secretReferences don't need patching
+generatorOptions:
+  disableNameSuffixHash: true
+
+secretGenerator:
+  # webhook secrets only authenticate generic webhook calls, not security-critical like the
+  # DB credentials, so literal defaults here are fine - override per-overlay if desired
+  - name: matomo-fpm-generic-webhook-secret
+    literals:
+      - WebHookSecretKey=changeme-fpm-webhook-secret
+  - name: matomo-nginx-generic-webhook-secret
+    literals:
+      - WebHookSecretKey=changeme-nginx-webhook-secret

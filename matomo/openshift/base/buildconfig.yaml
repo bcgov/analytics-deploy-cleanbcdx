@@ -1,0 +1,69 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: matomo-fpm
+  labels:
+    app: matomo-fpm
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: matomo-fpm
+  labels:
+    app: matomo-fpm
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/bcgov/analytics-deploy-cleanbcdx.git
+      ref: master
+    contextDir: matomo/docker
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: matomo-fpm:latest
+  triggers:
+    - type: ConfigChange
+    - type: Generic
+      generic:
+        secretReference:
+          name: matomo-fpm-generic-webhook-secret
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: matomo-nginx
+  labels:
+    app: matomo-nginx
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: matomo-nginx
+  labels:
+    app: matomo-nginx
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/bcgov/analytics-deploy-cleanbcdx.git
+      ref: master
+    contextDir: matomo/docker/nginx
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: matomo-nginx:latest
+  triggers:
+    - type: ConfigChange
+    - type: Generic
+      generic:
+        secretReference:
+          name: matomo-nginx-generic-webhook-secret
