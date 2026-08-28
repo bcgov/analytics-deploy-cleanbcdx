@@ -6,3 +6,11 @@ namespace: f181a8-test
 resources:
   - ../../base
   - route.yaml
+
+images:
+  - name: matomo-fpm
+    newName: image-registry.openshift-image-registry.svc:5000/f181a8-test/matomo-fpm
+    newTag: latest
+  - name: matomo-nginx
+    newName: image-registry.openshift-image-registry.svc:5000/f181a8-test/matomo-nginx
+    newTag: latest
